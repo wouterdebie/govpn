@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,11 +16,10 @@ import (
 	"os/user"
 	"time"
 
-	"code.google.com/p/go.crypto/nacl/secretbox"
+	"github.com/atotto/clipboard"
 	"github.com/dgryski/dgoogauth"
 	"github.com/seehuhn/password"
-	"github.com/atotto/clipboard"
-	"flag"
+	"golang.org/x/crypto/nacl/secretbox"
 )
 
 //Secretbox demo: http://play.golang.org/p/SRq2AqA4Dz
@@ -39,6 +39,7 @@ type PlainConfig struct {
 }
 
 var clipFlag = flag.Bool("clip", false, "Copy password and code to clipboard (useful for OSX Yosemite with broken scutil)")
+
 //var configFlag = flag.Bool("config", false, "Decrypt and print config")
 
 func main() {
@@ -48,10 +49,6 @@ func main() {
 	flag.Parse()
 
 	config, err := readConfigFromFile()
-
-	//if *configFlag {
-	//	fmt.Printf("%#v\n\n", config)
-	//}
 
 	if err != nil {
 		fmt.Println("Can't find config file (or error loading)... We will make a new config file...\n")
@@ -80,21 +77,20 @@ func connect(config PlainConfig) {
 		codeNow := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Unix()/30))
 		fmt.Printf("Code: %06d\n", codeNow)
 
-		cmd := exec.Command("scutil", "--nc", "start", config.VpnName, "--user", config.Username, "--password", config.Password+fmt.Sprintf("%06d", codeNow))
+		// cmd := exec.Command("scutil", "--nc", "start", config.VpnName, "--user", config.Username, "--password", config.Password+fmt.Sprintf("%06d", codeNow))
+		cmd := exec.Command("/Applications/FortiClient.app/Contents/MacOS/FortiClient")
 		err := cmd.Start()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		err = cmd.Wait()
+		// err = cmd.Wait()
 		if err != nil {
 			fmt.Println("Error while starting VPN.")
 		} else {
 			fmt.Println("VPN starting...")
-			if *clipFlag {
-				fmt.Println("Password and auth code copied to clipboard.")
-				clipboard.WriteAll(config.Password+fmt.Sprintf("%06d", codeNow))
-			}
+			fmt.Println("Password and auth code copied to clipboard.")
+			clipboard.WriteAll(config.Password + fmt.Sprintf("%06d", codeNow))
 		}
 
 		fmt.Println("\nPress enter to start the VPN again.")
